@@ -1,0 +1,90 @@
+@pro-header-hover-bg: rgba(0, 0, 0, 0.025);
+
+.Header {
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+    display: flex;
+    height: 64px;
+    line-height: 64px;
+    padding: 0 12px 0 0;
+    position: relative;
+
+    .logo {
+        font-size: 20px;
+        font-family: Avenir, -apple-system, BlinkMacSystemFont, segoe ui, Roboto,
+            helvetica neue, Arial, noto sans, sans-serif, apple color emoji,
+            segoe ui emoji, segoe ui symbol, noto color emoji, sans-serif;
+        margin-left: 40px;
+
+        .svg-icon {
+            position: relative;
+            top: 6px;
+            margin-right: 4px;
+        }
+
+        img {
+            width: 32px;
+            height: 32px;
+            vertical-align: -9px;
+            margin-right: 8px;
+        }
+
+        a {
+            color: #333;
+            font-weight: bold;
+        }
+    }
+
+    .right {
+        display: flex;
+        float: right;
+        height: 64px;
+        overflow: hidden;
+
+        .action {
+            display: flex;
+            align-items: center;
+            height: 64px;
+            padding: 0 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+
+            >span {
+                vertical-align: middle;
+            }
+
+            svg {
+                font-size: 18px;
+                color: #333;
+            }
+
+            &:hover {
+                background: @pro-header-hover-bg;
+            }
+
+            &:global(.opened) {
+                background: @pro-header-hover-bg;
+            }
+        }
+    }
+
+    .navBar {
+        margin-left: auto;
+        line-height: 64px;
+        font-weight: bold;
+
+        :global(.ant-menu-item) {
+            border-bottom: none !important;
+        }
+
+
+    }
+
+    // .searchBox {
+    //     margin-left: 40px;
+
+    //     .ant-select {
+    //         width: 200px;
+    //     }
+    // }
+}

@@ -1,0 +1,32 @@
+{
+    "presets": [
+        [
+            "@babel/preset-env",
+            {
+                "targets": {
+                    "node": "current"
+                }
+            }
+        ]
+    ],
+    "plugins": [
+        [
+            "@babel/plugin-proposal-class-properties"
+        ],
+        [
+            "module-resolver",
+            {
+                "root": [
+                    "./"
+                ],
+                "alias": {
+                    "@": "./src",
+                    "@db": "./src/db",
+                    "@panshirc": "./panshirc",
+                    "underscore": "lodash"
+                }
+            }
+        ]
+    ],
+    "exclude": "node_modules/**" // 只编译源代码
+}

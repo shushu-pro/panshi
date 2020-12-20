@@ -1,0 +1,22 @@
+{
+  "name": "@shushu.pro/panshi",
+  "description": "磐石",
+  "version": "0.0.2",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shushu-pro/panshi.git"
+  },
+  "scripts": {
+    "test": "gulp"
+  },
+  "keywords": [
+    "API管理",
+    "接口管理",
+    "数据MOCK"
+  ],
+  "author": "sschen86@163.com",
+  "devDependencies": {
+    "gulp": "^4.0.2"
+  }
+}

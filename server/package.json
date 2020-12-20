@@ -1,0 +1,52 @@
+{
+  "name": "@shushu.pro/panshi-server",
+  "version": "0.0.7",
+  "main": "index.js",
+  "author": "sschen86@163.com",
+  "license": "MIT",
+  "dependencies": {
+    "@koa/router": "^9.4.0",
+    "@shushu.pro/adapter": "0.0.4",
+    "@shushu.pro/datax": "^0.0.2",
+    "fs-extra": "^9.0.1",
+    "koa": "^2.13.0",
+    "koa-body": "^4.2.0",
+    "koa-bodyparser": "^4.3.0",
+    "koa-router": "^9.4.0",
+    "koa-send": "^5.0.1",
+    "koa-session2": "^2.2.10",
+    "koa2-connect-history-api-fallback": "^0.1.3",
+    "md5": "^2.3.0",
+    "path-to-regexp": "^6.2.0",
+    "sqlite": "^4.0.15",
+    "sqlite3": "^5.0.0"
+  },
+  "devDependencies": {
+    "@rollup/plugin-alias": "^3.1.1",
+    "babel-plugin-module-resolver": "^4.0.0",
+    "test996": "^0.0.3"
+  },
+  "scripts": {
+    "dev": "npm run dev-node",
+    "dev-node": "nodemon --exec babel-node ./src/index",
+    "dev-browser": "rollup -c ./config/rollup.dev.js -w",
+    "build": "rimraf dist && rollup -c ./config/rollup.build.js",
+    "deploy": "npm run test && npm run build && npm version patch && npm publish --access=public",
+    "test": "jest test",
+    "setup": "babel-node ./src/setup",
+    "start": "node index"
+  },
+  "keywords": [
+    "@shushu.pro"
+  ],
+  "repository": "https://github.com/sschen86/panshi-server.git",
+  "files": [
+    "dist/",
+    "db/",
+    "panshirc.js",
+    "index.js",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ]
+}
