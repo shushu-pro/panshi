@@ -1,18 +1,15 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { Route, BrowserRouter } from 'react-router-dom';
-
-import Router, { RouterConfig } from './Router';
-
+import Router, { RouterOption } from './Router';
 
 let activeRouter = null;
 
-export default function createRouter (routerConfig: RouterConfig) {
-  const router = activeRouter = new Router(routerConfig);
-
+export default function createRouter (routerOption: RouterOption) {
+  const router = activeRouter = new Router(routerOption);
+  const RouterRender = router.render.bind(router);
   return () => (
     <BrowserRouter>
-      <Route render={() => router.renderLayout()} />
+      <Route render={() => <RouterRender />} />
     </BrowserRouter>
   );
 }

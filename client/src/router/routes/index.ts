@@ -1,4 +1,4 @@
-import { Routes } from '../core/Router';
+import { RoutesConfig } from '@/router';
 import others from './others';
 import user from './user';
 
@@ -12,19 +12,4 @@ export default [
       ...user,
     ],
   },
-] as Routes;
-
-
-// import other from './other';
-
-// export default [
-//   {
-//     layout: {
-//       header: true,
-//     },
-
-//     children: [
-//       ...other,
-//     ],
-//   },
-// ] as Routes;
+] as RoutesConfig;

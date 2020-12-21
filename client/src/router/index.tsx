@@ -1,39 +1,50 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '@/layout/index';
 import { Redirect } from 'react-router-dom';
-import user from '@/page/user/exports';
-import createRouter, { useRoute } from './core/index';
-import routes from './routes/index';
+import { atom, useRecoilState, useRecoilValue } from 'recoil';
+import createRouter, { useRoute } from './core';
+import { RoutesConfig } from './core/Router';
+import routes from './routes';
+
+
+let userInfoData = {
+  nick: '',
+  auths: [],
+};
+const userInfoAtom = atom({ key: 'userInfo', default: userInfoData });
 
 
 const { defaultTitle } = process.env;
 
+
 export default createRouter({
   Layout,
   routes,
-  routerState ({ setState }) {
-    const setUserInfo = user.useSetUserInfo();
+  routerState (setState) {
+    const [ userInfo, userInfoSet ] = useRecoilState(userInfoAtom);
+
     useEffect(() => {
-      setUserInfo()
-        .then(() => {
-          setState({ hasLogin: true });
-        })
-        .catch(() => {
-          setState({ hasLogin: false });
+      setTimeout(() => {
+        userInfoSet(userInfoData = {
+          nick: '张三',
+          auths: [],
         });
+
+        setState({
+          isLogin: !true,
+          auths: [],
+        });
+      }, 1000);
     }, []);
   },
+  routerEnter (router) {
+    document.title = router.title() || defaultTitle;
 
-  async beforeRoute (router) {
     if (router.notFound()) {
       return <Redirect to="/page404" />;
     }
 
-    console.info('xxx');
-
-    const hasLogin = router.hasLogin();
-
-    if (hasLogin) {
+    if (!router.notLogin()) {
       if (router.route.path === '/login') {
         return <Redirect to="/" />;
       }
@@ -41,24 +52,14 @@ export default createRouter({
       return <Redirect to="/login" />;
     }
 
-    console.info('ooooooooooo');
-
-
-    // // 授权拦截
-    // if (!await user.hasAuth(router.route.auths)) {
-    //   return <Redirect to="/noauth" />;
-    // }
-
-    try {
-      // await user.login();
-    } catch (err) {
-      // ...
+    if (router.notAuth()) {
+      return <Redirect to="/pageauth" />;
     }
 
-    document.title = router.title() || defaultTitle;
+    // console.info(router.route);
   },
 });
 
 export {
-  useRoute,
+  useRoute, RoutesConfig,
 };

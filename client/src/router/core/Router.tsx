@@ -1,266 +1,389 @@
+import { Space, Input, Spin } from 'antd';
 import React, { useState, useEffect } from 'react';
+import { Redirect, Link, useHistory } from 'react-router-dom';
 import { match, MatchFunction } from 'path-to-regexp';
-import { Redirect, useHistory } from 'react-router-dom';
-import { Spin } from 'antd';
-import { connect } from '@/package/haima';
 
-interface Route{
-  path: string; // 路由路径
-  layout: Record<string, unknown>; // 布局
-  title?: string | (() => string); // 标题
-  params: Record<string, unknown>; // 参数
-  query: Record<string, unknown>; // 参数
-  redirect?: string;
+type KeyValue = Record<string, string>
+
+type LayoutConfig = {
+  header?: boolean;
+  sidebar?: boolean;
 }
 
-export type Routes = Array<RouteConfig>;
-
-interface RouteConfig {
+// 标准化的路由配置项
+type NormalizeRouteConfig = {
+  layout: LayoutConfig,
   path: string;
-  page?: () => React.FC;
-  lazy?: () => Promise<JSX.Element>;
-  loginIgnore?: boolean;
-  auths?: Array<string>;
-  layout?: {
-    header?: boolean;
-    sidebar?: boolean;
-  },
-  title?: string | ((route: Route) => string); // 标题
-  children?: Array<RouteConfig>;
   redirect?: string | { query: boolean; path: string; } | ((auery) => string);
-
-}
-
-export interface RouterConfig {
-  Layout?: (props) => JSX.Element;
-  routes: Routes;
-  routerState?: (props) => void;
-  beforeRoute?: (router: Router) => Promise<JSX.Element>;
-}
-
-interface InnerRoute{
-  [k: string]: unknown;
   pathMatch?: MatchFunction;
-  routePath?: string;
   keepAliveMatchs: Array<MatchFunction>;
-  routeRender?: () => JSX.Element;
+  RouteView?: React.FC;
+  title?: string | ((route: RouterRoute) => string); // 标题
+  lazy?: () => Promise<{default: React.FC}>;
+  loginIgnore?: boolean;
+  authIgnore?: boolean;
 }
 
-class Router {
-  route: Route;
-  private Layout?: React.FC;
-  private beforeRoute: (router: Router) => Promise<JSX.Element>;
-  private staticRoutes: Record<string, InnerRoute>;
-  private dynamicRoutes: Array<InnerRoute>;
-  private keepAliveRoutes: Array<InnerRoute>;
-  private activeJSX: JSX.Element;
-  private childrenRoutes: Array<InnerRoute>;
-  private innerRoute: any;
-  private routerState: (props) => void;
-  private stateLogin: boolean;
-  private stateAuth: boolean;
+// 输出的路由信息
+type RouterRoute = {
+  path: string;
+  layout: LayoutConfig;
+  title?: string | ((route: RouterRoute) => string); // 标题
+  params: KeyValue;
+  query: KeyValue;
+}
 
-  constructor ({ Layout, beforeRoute, routes, routerState }: RouterConfig) {
-    this.beforeRoute = beforeRoute;
+type MybeJSX = JSX.Element | void
+
+export type RouterOption = {
+  Layout?: (props) => JSX.Element;
+  routes: RoutesConfig;
+  routerState: (props) => void;
+  routerEnter: (router: Router) => MybeJSX;
+}
+
+export type RoutesConfig = Array<RouteConfig>;
+
+type RouteConfig = {
+  path: string;
+  page?: React.FC;
+  lazy?: () => Promise<{default: React.FC}>;
+  render?: () => JSX.Element;
+  loginIgnore?: boolean;
+  authIgnore?: boolean;
+  auths?: Array<string>;
+  layout?: LayoutConfig,
+  title?: string | ((route: RouterRoute) => string); // 标题
+  children?: RoutesConfig;
+  redirect?: string | { query: boolean; path: string; } | ((auery) => string);
+  keepAlive?: Array<string>;
+}
+export default class Router {
+//  布局基座
+  private Layout?: (props) => JSX.Element;
+
+  // 路由状态钩子
+  private routerStateHook: (props) => void;
+
+  // 路由拦截钩子
+  private routerEnterHook: (router: Router) => MybeJSX;
+
+  // 静态路由配置项
+  private staticRoutes: Record<string, NormalizeRouteConfig>;
+
+  // 动态路由配置项
+  private dynamicRoutes: Array<NormalizeRouteConfig>;
+
+  // 缓存中的路由信息
+  private keepAliveRoutes: Array<NormalizeRouteConfig>;
+
+  // 所有待渲染的路由视图配置
+  private routerViewRoutes: Array<NormalizeRouteConfig>;
+
+  // 当前渲染的路由视图
+  private routerView: JSX.Element;
+
+  // 激活的路由配置信息
+  private activeRoute: NormalizeRouteConfig;
+
+  // 导出的路由信息
+  route: RouterRoute;
+
+  // 权限因子列表
+  stateAuths: Array<string>;
+
+  // 登录状态
+  stateIsLogin: boolean;
+
+
+  constructor ({ Layout, routes, routerState, routerEnter }: RouterOption) {
     this.Layout = Layout;
+    this.routerStateHook = routerState;
+    this.routerEnterHook = routerEnter;
     this.staticRoutes = {};
     this.dynamicRoutes = [];
+    this.routerView = null;
+    this.routerViewRoutes = [];
     this.keepAliveRoutes = [];
-    this.activeJSX = null;
-    this.childrenRoutes = [];
-    this.stateLogin = false;
-    this.stateAuth = false;
-    this.routerState = routerState;
+    this.stateAuths = [];
+    this.stateIsLogin = false;
+
     this.initRoutes(routes);
   }
 
-  notFound () {
-    return !this.innerRoute;
-  }
 
-  hasLogin () {
-    return this.stateLogin;
-  }
+  render () {
+    const history = useHistory();
+    const routerState = this.routerState();
+    const [ pageLoading, pageLoadingSet ] = useState(false);
+    const [ content, contentSet ] = useState(null);
+    // const [ isUpdate, isUpdateSet ] = useState(null);
+    // const [update, updateSet] =
 
-  hasAuth () {
-    return this.stateAuth;
-  }
+    // 监听路由变化
+    useEffect(() => {
+      if (!routerState.isReady) {
+        return;
+      }
+      pageLoadingSet(true);
+      this.routerEnter(history)
+        .then((content) => {
+          contentSet(content);
+        })
+        .finally(() => {
+          pageLoadingSet(false);
+        });
+    }, [ `${history.location.pathname}?${history.location.search}`, routerState.isReady ]);
 
-  renderLayout () {
-    const router = {
-      Layout: this.Layout,
-      beforeRoute: this.beforeRoute.bind(this),
-      renderPage: this.renderPage.bind(this),
-      routerEnter: this.routerEnter.bind(this),
-      getLayout: () => this.route?.layout || {},
-      routerState: this.routerState ? this.routerState.bind(this) : null,
-      setState: ({ hasLogin, hasAuth }) => {
-        if (hasLogin !== undefined) {
-          this.stateLogin = hasLogin;
-        }
-        if (hasAuth !== undefined) {
-          this.stateAuth = hasAuth;
-        }
-      },
-    };
+    if (!routerState.isReady) {
+      return (
+        <Spin size="large">
+          <div style={{ minHeight: '600px' }}>&nbsp;</div>
+        </Spin>
+      );
+    }
 
-    return <RenderRoute router={router} />;
-  }
+    if (!content) {
+      return null;
+    }
 
-  renderPage () {
-    const { innerRoute } = this;
     return (
-      <>
-        {this.activeJSX}
-        {this.childrenRoutes.map((item) => (<div key={item.routePath} style={{ display: item === innerRoute ? '' : 'none' }}>{item.routeRender()}</div>))}
-      </>
+      <Spin spinning={pageLoading} size="large">
+        {content}
+      </Spin>
     );
   }
 
+  notFound () {
+    return !this.activeRoute;
+  }
+
   title () {
-    const { innerRoute } = this;
-    return typeof innerRoute.title === 'function' ? innerRoute.title(this.route) : innerRoute.title;
+    const { activeRoute } = this;
+    if (!activeRoute) {
+      return;
+    }
+
+    const { title } = activeRoute;
+    return typeof title === 'function' ? title(this.route) : title;
   }
 
   needLogin () {
-    return !this.innerRoute.loginIgnore;
+    return !this.activeRoute.loginIgnore;
   }
 
-  private initRoutes (routes: Array<RouteConfig>) {
-    const walkRoutes = (routes, paths, parentLayout) => {
+  notLogin () {
+    return !true;
+  }
+
+  notAuth () {
+    return true && this.needLogin() && !this.activeRoute.authIgnore;
+  }
+
+  private initRoutes (routes: RoutesConfig) {
+    const { staticRoutes, dynamicRoutes } = this;
+
+    walkRoutes(routes, [ '' ], {});
+
+    // console.info({ staticRoutes, dynamicRoutes });
+
+    function walkRoutes (routes: RoutesConfig, paths: Array<string>, parentLayout) {
       routes.forEach((route) => {
-        const { path } = route;
+        const { path, layout, children } = route;
         const pathsNext = paths.concat([ path ]);
-        const pathsNextText = pathsNext.join('/').replace(/\/+/g, '/');
-        const layout = route.layout === null ? null : (route.layout || parentLayout);
-        route.routeLayout = layout || {};
-        if (route.children) {
-          walkRoutes(route.children, pathsNext, layout);
+
+        const routeLayout = (layout === null ? {} : (layout || parentLayout));
+
+        if (children) {
+          walkRoutes(children, pathsNext, routeLayout);
         }
 
         // 非页面级别的路由配置项
-        if (typeof route.redirect === 'undefined' && !route.page && !route.render && !route.lazy) {
+        if (!route.redirect && !route.page && !route.render && !route.lazy) {
           return;
         }
 
-        // 生产路由地址
-        route.routePath = pathsNextText;
+        // 路由全路径
+        const pathsNextText = pathsNext.join('/').replace(/\/+/g, '/');
+
+        const tempRouteConfig: NormalizeRouteConfig = {
+          path: pathsNextText,
+          layout: routeLayout,
+          keepAliveMatchs: [],
+        };
 
         // 判断是动态还是静态路径的路由
         if (/:/.test(pathsNextText)) {
-          this.dynamicRoutes.push(route);
-          route.pathMatch = match(route.routePath);
+          tempRouteConfig.pathMatch = match(pathsNextText);
+          dynamicRoutes.push(tempRouteConfig);
         } else {
-          this.staticRoutes[pathsNextText] = route;
+          staticRoutes[pathsNextText] = tempRouteConfig;
         }
+
+        // 跳转的路由配置项，不在后续的逻辑
+        if (route.redirect) {
+          tempRouteConfig.redirect = route.redirect;
+          return;
+        }
+
+        tempRouteConfig.title = route.title;
+        tempRouteConfig.loginIgnore = route.loginIgnore;
+        tempRouteConfig.authIgnore = route.authIgnore;
 
         // 路由缓存
         const { keepAlive } = route;
         if (keepAlive) {
-          route.keepAliveMatchs = (Array.isArray(keepAlive) ? keepAlive : [ keepAlive ]).map((item) => match(item));
+          tempRouteConfig.keepAliveMatchs = (Array.isArray(keepAlive) ? keepAlive : [ keepAlive ]).map((item) => match(item));
         }
 
         if (route.render) {
-          route.routeRender = route.render;
+          tempRouteConfig.RouteView = () => route.render();
         } else if (route.page) {
-          route.routeRender = route.page;
+          tempRouteConfig.RouteView = route.page;
+        } else {
+          tempRouteConfig.lazy = route.lazy;
         }
       });
-    };
+    }
+  }
 
-    walkRoutes(routes, [ '' ], null);
+  private routerState () {
+    const [ routerState, routerStateSet ] = useState({
+      isReady: false,
+      isLogin: this.stateIsLogin,
+      auths: this.stateAuths,
+    });
+
+    this.routerStateHook((nextState) => {
+      this.stateAuths = nextState.auths;
+      this.stateIsLogin = nextState.isLogin;
+
+      routerStateSet({
+        isReady: true,
+        ...nextState,
+      });
+    });
+
+    return routerState;
   }
 
   private async routerEnter (history) {
-    this.routeUpdate(history);
+    this.updateRoute(history);
 
-    const { innerRoute } = this;
+    const routerView = (
+      <>
+        {this.matchRedirect() || this.matchRouterEnter() || this.matchNotFound() || await this.matchRoute() || null}
+        {this.routerViewRoutes.map((item) => (
+          <div key={item.path} style={{ display: item === this.activeRoute ? '' : 'none' }}>
+            <item.RouteView />
+          </div>
+        ))}
+      </>
+    );
 
-    this.activeJSX = null;
 
-    if (this.isRedirect()) {
-      const { redirect } = innerRoute;
+    const { Layout } = this;
+    let content = null;
+    if (Layout) {
+      content = <Layout layout={this.activeRoute ? this.activeRoute.layout : {}} routerView={routerView} />;
+    } else {
+      content = routerView;
+    }
+
+    return content;
+  }
+
+  // 匹配路由跳转
+  private matchRedirect () {
+    const { activeRoute } = this;
+    if (activeRoute && /^(string|object|function)$/.test(typeof activeRoute.redirect)) {
+      const { redirect } = activeRoute;
       let queryString;
       let redirectTo;
 
       const typeofRedirect = typeof redirect;
+      const routeQuery = this.route.query;
 
       if (typeofRedirect === 'object') {
-        const { path, query } = redirect;
+        const { path, query } = redirect as { query: boolean; path: string; };
         if (query === true) {
-          queryString = queryStringify(this.route.query);
+          queryString = queryStringify(routeQuery);
         } else if (typeof query === 'function') {
-          queryString = queryStringify(query(this.route.query));
+          queryString = queryStringify((query as (q: KeyValue) => string)(routeQuery));
         } else {
           queryString = queryStringify(query);
         }
         redirectTo = path + (queryString ? `?${queryString}` : '');
       } else if (typeofRedirect === 'function') {
-        redirectTo = redirect(this.route.query);
+        redirectTo = (redirect as (query: KeyValue) => string)(routeQuery);
       } else {
         redirectTo = redirect;
       }
 
-      this.activeJSX = <Redirect to={redirectTo} />;
-      return;
+      return <Redirect to={redirectTo} />;
     }
+  }
 
-    // 执行拦截器
-    if (this.beforeRoute) {
-      const activeJSX = await this.beforeRoute(this);
+  // 匹配路由拦截
+  private matchRouterEnter () {
+    return this.routerEnterHook(this);
+  }
 
-      if (activeJSX) {
-        this.activeJSX = activeJSX;
-        return;
-      }
-    }
-
+  // 匹配未定义的路由
+  private matchNotFound () {
     if (this.notFound()) {
-      this.activeJSX = <div>PAGE404</div>;
+      return <div>PAGE404</div>;
     }
+  }
 
+  // 匹配路由正确
+  private async matchRoute () {
+    const { activeRoute } = this;
     const keepAliveRoutes = this.keepAliveRoutes.filter((item) => {
-      if (innerRoute === item) {
+      if (activeRoute === item) {
         return false;
       }
 
       // 符合keepAlive的组件继续保持
-      return item.keepAliveMatchs.some((match) => match(innerRoute.routePath));
+      return item.keepAliveMatchs.some((matchPath) => matchPath(activeRoute.path));
     });
 
-    const childrenRoutes = [ ...keepAliveRoutes ];
+    const routerViewRoutes = [ ...keepAliveRoutes ];
 
     // 不是从拦截器中返回的节点，则进行保存
-    if (innerRoute.keepAliveMatchs) {
-      keepAliveRoutes.push(innerRoute);
+    if (activeRoute.keepAliveMatchs) {
+      keepAliveRoutes.push(activeRoute);
     }
 
-    childrenRoutes.push(innerRoute);
+    routerViewRoutes.push(activeRoute);
 
     // 异步加载
-    if (!innerRoute.routeRender) {
-      const FC = (await innerRoute.lazy()).default;
-      innerRoute.routeRender = () => <FC />;
+    if (!activeRoute.RouteView) {
+      const FC = (await activeRoute.lazy()).default;
+      activeRoute.RouteView = FC;
     }
 
     this.keepAliveRoutes = keepAliveRoutes;
-    this.childrenRoutes = childrenRoutes;
+    this.routerViewRoutes = routerViewRoutes;
+
+    return null;
   }
 
-  private routeUpdate (history) {
+  // 更新路由信息
+  private updateRoute (history) {
     const { location } = history;
-    const { pathname } = location;
-    // 直接匹配
-    let route: any = this.staticRoutes[pathname];
+    const { pathname, search } = location;
+    let activeRoute = this.staticRoutes[pathname];
     let params: any = {};
 
+
     // 尝试从动态路由中进行匹配
-    if (!route) {
-      this.dynamicRoutes.some((item) => {
-        const result = item.pathMatch(pathname);
+    if (!activeRoute) {
+      this.dynamicRoutes.some((route) => {
+        const result = route.pathMatch(pathname);
 
         if (result) {
-          route = item;
+          activeRoute = route;
           params = result.params;
           return true;
         }
@@ -268,97 +391,68 @@ class Router {
       });
     }
 
-    this.innerRoute = route;
-
-    const query: {[key: string]: string} = {};
+    this.activeRoute = activeRoute;
 
     // 解析查询参数
-    if (location.search) {
-      location.search.substr(1).split(/&/).forEach((item) => {
+    const query: KeyValue = {};
+    if (search) {
+      search.substr(1).split(/&/).forEach((item: string) => {
         const [ key, value ] = item.split('=');
         query[key] = value;
       });
     }
 
-    if (route) {
+    // 生成路由信息对象
+    if (activeRoute) {
       this.route = {
-        path: route.routePath,
-        layout: route.routeLayout,
-        title: route.title,
+        path: activeRoute.path,
+        layout: activeRoute.layout,
+        title: activeRoute.title,
         params,
         query,
       };
     } else {
       this.route = {
         path: pathname,
-        params,
         layout: {},
+        params,
         query,
       };
     }
-  }
 
-  private isRedirect () {
-    return this.innerRoute && /^(string|object|function)$/.test(typeof this.innerRoute.redirect);
+    // console.info('updateRoute', this.route);
   }
 }
 
-export default Router;
+function Nonex () {
+  const [ txt, txtSet ] = useState(0);
+  return <div onClick={() => txtSet(Math.random())}>xx{txt}xaa</div>;
+}
 
-function RenderRoute ({ router }) {
-  const [ loading, loadingSet ] = useState(false);
-  const [ routerStateLoading, routerStateLoadingSet ] = useState(true);
-  const history = useHistory();
-  const routePath = `${history.location.pathname}?${history.location.search}`;
-  const { Layout } = router;
+let arr = [ 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
+arr = arr.concat(arr);
+arr = arr.concat(arr);
+arr = arr.concat(arr);
+arr = arr.concat(arr);
+arr = arr.concat(arr);
+arr = arr.concat(arr);
+arr = arr.concat(arr);
+arr = arr.concat(arr);
+arr = arr.concat(arr);
+// arr = arr.concat(arr);
+// arr = arr.concat(arr);
+// arr = arr.concat(arr);
 
-  useEffect(() => {
-    if (!router.routerState) {
-      router.setState({
-        hasLogin: true,
-        hasAuth: true,
-      });
-      routerStateLoadingSet(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (routerStateLoading) {
-      return;
-    }
-
-    loadingSet(true);
-    router.routerEnter(history)
-      .finally(() => {
-        loadingSet(false);
-      });
-  }, [ routePath, routerStateLoading ]);
-
-  router.routerState && router.routerState({
-    setState (nextState) {
-      router.setState(nextState);
-      routerStateLoadingSet(false);
-    },
-  });
-
-  let content;
-
-
-  if (routerStateLoading) {
-    content = <div style={{ minHeight: '600px' }}>&nbsp;</div>;
-  } else if (Layout) {
-    content = <Layout render={router.renderPage} layout={router.getLayout()} />;
-  } else {
-    content = router.renderPage();
-  }
-
-  console.info({
-    routerStateLoading, routePath, content,
-  });
+function MapInput () {
+  console.info('yes');
   return (
-    <Spin spinning={loading || routerStateLoading} size="large">
-      {content}
-    </Spin>
+    <>
+      {
+        arr.map((v, i) => (
+          <Input key={`${i}`} name={`${i}`} defaultValue={i} />
+        ))
+      }
+    </>
   );
 }
 
