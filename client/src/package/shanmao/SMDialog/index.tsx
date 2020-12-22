@@ -13,12 +13,17 @@ export interface SMDialogProps {
 
   width?: number;
   loading?: boolean;
-  onOpen?(): void; // 打开窗口
-  onSubmit?(): void; // 确定按钮的回调
+  onOpen?(params): void; // 打开窗口
+  onSubmit?(): void | false | Promise<any>; // 确定按钮的回调
   onClose?(): void; // 关闭触发，可以被拦截
   afterClose?(): void; // 关闭窗口后触发
 
   props?: Record <string, unknown>; // 传递组件的原生props
+}
+
+type FCA = {
+  (): JSX.Element;
+  API: SMDialogAPI
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -38,93 +43,101 @@ export default function useSMDialog ({
   onClose,
   afterClose,
 }: SMDialogProps) {
-  const [ visible, visibleSet ] = useState(false);
-  const [ contentLoading, contentLoadingSet ] = useState(false);
-  const [ submitLoading, submitLoadingSet ] = useState(false);
+  const [ exportFC ] = useState(() => FC as FCA);
 
-  useEffect(() => {
-    contentLoadingSet(loading);
-  }, [ loading ]);
+  return [ exportFC, new Proxy(exportFC, {
+    get (target: any, key) { return target.API[key]; },
+  }) ] as [FCA, SMDialogAPI];
 
-  useEffect(() => {
-    if (visible) {
-      onOpen && onOpen();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ visible ]);
+  function FC () {
+    const [ visible, visibleSet ] = useState(false);
+    const [ contentLoading, contentLoadingSet ] = useState(false);
+    const [ submitLoading, submitLoadingSet ] = useState(false);
+    const [ openParams, openParamsSet ] = useState();
 
-  const jsx = (
-    <Modal
-      maskClosable={false}
-      {...props}
-      {...createExternalProps()}
-    >
-      <Spin spinning={contentLoading}>
-        {render()}
-      </Spin>
-    </Modal>
-  );
+    useEffect(() => {
+      contentLoadingSet(loading);
+    }, [ loading ]);
 
-  const api = createAPI();
+    useEffect(() => {
+      if (visible) {
+        onOpen && onOpen(openParams);
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ visible ]);
 
-  return [ jsx, api ] as [JSX.Element, SMDialogAPI];
+    const api = exportFC.API = createAPI();
 
-  function createAPI (): SMDialogAPI {
-    return {
-      open () {
-        visibleSet(true);
-      },
-      submit () {
-        hide(onSubmit && onSubmit());
-      },
-      close () {
-        hide(onClose && onClose());
-      },
-    };
-  }
+    return (
+      <Modal
+        maskClosable={false}
+        {...props}
+        {...createExternalProps()}
+      >
+        <Spin spinning={contentLoading}>
+          {render()}
+        </Spin>
+      </Modal>
+    );
 
-  function createExternalProps () {
-    const externalProps: { [k: string]: unknown } = {
-      title,
-      width,
-      visible,
-      okButtonProps: {},
-      cancelButtonProps: {},
-    };
-
-    if (onSubmit) {
-      externalProps.onOk = () => api.submit();
+    function createAPI (): SMDialogAPI {
+      return {
+        open (params) {
+          openParamsSet(params);
+          visibleSet(true);
+        },
+        submit () {
+          hide(onSubmit && onSubmit());
+        },
+        close () {
+          hide(onClose && onClose());
+        },
+      };
     }
 
-    if (onClose || !props.onCancel) {
-      externalProps.onCancel = () => api.close();
-    }
+    function createExternalProps () {
+      const externalProps: { [k: string]: unknown } = {
+        title,
+        width,
+        visible,
+        okButtonProps: {},
+        cancelButtonProps: {},
+      };
 
-    if (afterClose) {
-      externalProps.afterClose = afterClose;
-    }
+      if (onSubmit) {
+        externalProps.onOk = () => api.submit();
+      }
 
-    Object.assign(externalProps.okButtonProps, props.okButtonProps, {
-      loading: submitLoading,
-    });
+      if (onClose || !props.onCancel) {
+        externalProps.onCancel = () => api.close();
+      }
 
-    Object.assign(externalProps.cancelButtonProps, props.cancelButtonProps, {
-      loading: submitLoading,
-    });
+      if (afterClose) {
+        externalProps.afterClose = afterClose;
+      }
 
-    return externalProps;
-  }
-
-  function hide (result) {
-    if (result instanceof Promise) {
-      submitLoadingSet(true);
-      result.then(() => {
-        visibleSet(false);
-      }).finally(() => {
-        submitLoadingSet(false);
+      Object.assign(externalProps.okButtonProps, props.okButtonProps, {
+        loading: submitLoading,
       });
-    } else if (result !== false) {
-      visibleSet(false);
+
+      Object.assign(externalProps.cancelButtonProps, props.cancelButtonProps, {
+        loading: submitLoading,
+      });
+
+      return externalProps;
+    }
+
+    function hide (result) {
+      if (result instanceof Promise) {
+        submitLoadingSet(true);
+        result.then(() => {
+          visibleSet(false);
+        }).finally(() => {
+          submitLoadingSet(false);
+        });
+      } else if (result !== false) {
+        visibleSet(false);
+      }
     }
   }
 }

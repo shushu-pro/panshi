@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '@/layout/index';
 import { Redirect } from 'react-router-dom';
-import user from '@/page/user/exports';
+import user from '@/page/user';
 import createRouter, { useRoute } from './core/index';
 import routes from './routes/index';
 
@@ -39,8 +39,6 @@ export default createRouter({
       return <Redirect to="/page404" />;
     }
 
-    console.info('xxx');
-
     const hasLogin = router.hasLogin();
 
     if (hasLogin) {
@@ -50,8 +48,6 @@ export default createRouter({
     } else if (router.needLogin()) {
       return <Redirect to="/login" />;
     }
-
-    console.info('ooooooooooo');
 
 
     // // 授权拦截

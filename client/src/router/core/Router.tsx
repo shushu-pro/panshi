@@ -2,13 +2,7 @@ import { Space, Input, Spin } from 'antd';
 import React, { useState, useEffect } from 'react';
 import { Redirect, Link, useHistory } from 'react-router-dom';
 import { match, MatchFunction } from 'path-to-regexp';
-
-type KeyValue = Record<string, string>
-
-type LayoutConfig = {
-  header?: boolean;
-  sidebar?: boolean;
-}
+import { RoutesConfig, LayoutConfig, KeyValue, RouterRoute } from './define';
 
 // 标准化的路由配置项
 type NormalizeRouteConfig = {
@@ -22,41 +16,16 @@ type NormalizeRouteConfig = {
   lazy?: () => Promise<{default: React.FC}>;
   loginIgnore?: boolean;
   authIgnore?: boolean;
+  auths?: Array<string>;
 }
 
-// 输出的路由信息
-type RouterRoute = {
-  path: string;
-  layout: LayoutConfig;
-  title?: string | ((route: RouterRoute) => string); // 标题
-  params: KeyValue;
-  query: KeyValue;
-}
-
-type MybeJSX = JSX.Element | void
+type MybeJSX = JSX.Element | void;
 
 export type RouterOption = {
   Layout?: (props) => JSX.Element;
   routes: RoutesConfig;
   routerState: (props) => void;
   routerEnter: (router: Router) => MybeJSX;
-}
-
-export type RoutesConfig = Array<RouteConfig>;
-
-type RouteConfig = {
-  path: string;
-  page?: React.FC;
-  lazy?: () => Promise<{default: React.FC}>;
-  render?: () => JSX.Element;
-  loginIgnore?: boolean;
-  authIgnore?: boolean;
-  auths?: Array<string>;
-  layout?: LayoutConfig,
-  title?: string | ((route: RouterRoute) => string); // 标题
-  children?: RoutesConfig;
-  redirect?: string | { query: boolean; path: string; } | ((auery) => string);
-  keepAlive?: Array<string>;
 }
 export default class Router {
 //  布局基座
@@ -84,7 +53,7 @@ export default class Router {
   private routerView: JSX.Element;
 
   // 激活的路由配置信息
-  private activeRoute: NormalizeRouteConfig;
+  private matchedRoute: NormalizeRouteConfig;
 
   // 导出的路由信息
   route: RouterRoute;
@@ -155,29 +124,29 @@ export default class Router {
   }
 
   notFound () {
-    return !this.activeRoute;
+    return !this.matchedRoute;
   }
 
   title () {
-    const { activeRoute } = this;
-    if (!activeRoute) {
+    const { matchedRoute } = this;
+    if (!matchedRoute) {
       return;
     }
 
-    const { title } = activeRoute;
+    const { title } = matchedRoute;
     return typeof title === 'function' ? title(this.route) : title;
   }
 
   needLogin () {
-    return !this.activeRoute.loginIgnore;
+    return !this.matchedRoute.loginIgnore;
   }
 
   notLogin () {
-    return !true;
+    return !this.stateIsLogin;
   }
 
   notAuth () {
-    return true && this.needLogin() && !this.activeRoute.authIgnore;
+    return this.needLogin() && !this.matchedRoute.authIgnore && !this.matchedRoute.auths.some((auth) => this.stateAuths.includes(auth));
   }
 
   private initRoutes (routes: RoutesConfig) {
@@ -189,7 +158,7 @@ export default class Router {
 
     function walkRoutes (routes: RoutesConfig, paths: Array<string>, parentLayout) {
       routes.forEach((route) => {
-        const { path, layout, children } = route;
+        const { path = '', layout, children } = route;
         const pathsNext = paths.concat([ path ]);
 
         const routeLayout = (layout === null ? {} : (layout || parentLayout));
@@ -204,7 +173,7 @@ export default class Router {
         }
 
         // 路由全路径
-        const pathsNextText = pathsNext.join('/').replace(/\/+/g, '/');
+        const pathsNextText = pathsNext.join('/').replace(/\/+/g, '/').replace(/(.)\/$/, '$1');
 
         const tempRouteConfig: NormalizeRouteConfig = {
           path: pathsNextText,
@@ -228,7 +197,8 @@ export default class Router {
 
         tempRouteConfig.title = route.title;
         tempRouteConfig.loginIgnore = route.loginIgnore;
-        tempRouteConfig.authIgnore = route.authIgnore;
+        tempRouteConfig.authIgnore = !route.auths;
+        tempRouteConfig.auths = route.auths || [];
 
         // 路由缓存
         const { keepAlive } = route;
@@ -254,13 +224,23 @@ export default class Router {
       auths: this.stateAuths,
     });
 
-    this.routerStateHook((nextState) => {
-      this.stateAuths = nextState.auths;
-      this.stateIsLogin = nextState.isLogin;
+    this.routerStateHook(({ isReady, isLogin, auths }) => {
+      routerStateSet((prev) => {
+        const nextState = { ...prev };
 
-      routerStateSet({
-        isReady: true,
-        ...nextState,
+        if (isReady !== undefined) {
+          nextState.isReady = isReady;
+        }
+
+        if (isLogin !== undefined) {
+          this.stateIsLogin = nextState.isLogin = isLogin;
+        }
+
+        if (auths !== undefined) {
+          this.stateAuths = nextState.auths = auths;
+        }
+
+        return nextState;
       });
     });
 
@@ -268,24 +248,25 @@ export default class Router {
   }
 
   private async routerEnter (history) {
+    // console.info({ history: history.location.pathname });
     this.updateRoute(history);
+
 
     const routerView = (
       <>
         {this.matchRedirect() || this.matchRouterEnter() || this.matchNotFound() || await this.matchRoute() || null}
         {this.routerViewRoutes.map((item) => (
-          <div key={item.path} style={{ display: item === this.activeRoute ? '' : 'none' }}>
+          <div key={item.path} style={{ display: item === this.matchedRoute ? '' : 'none' }}>
             <item.RouteView />
           </div>
         ))}
       </>
     );
 
-
     const { Layout } = this;
     let content = null;
     if (Layout) {
-      content = <Layout layout={this.activeRoute ? this.activeRoute.layout : {}} routerView={routerView} />;
+      content = <Layout layout={this.matchedRoute ? this.matchedRoute.layout : {}} routerView={routerView} />;
     } else {
       content = routerView;
     }
@@ -295,9 +276,9 @@ export default class Router {
 
   // 匹配路由跳转
   private matchRedirect () {
-    const { activeRoute } = this;
-    if (activeRoute && /^(string|object|function)$/.test(typeof activeRoute.redirect)) {
-      const { redirect } = activeRoute;
+    const { matchedRoute } = this;
+    if (matchedRoute && /^(string|object|function)$/.test(typeof matchedRoute.redirect)) {
+      const { redirect } = matchedRoute;
       let queryString;
       let redirectTo;
 
@@ -338,29 +319,29 @@ export default class Router {
 
   // 匹配路由正确
   private async matchRoute () {
-    const { activeRoute } = this;
+    const { matchedRoute } = this;
     const keepAliveRoutes = this.keepAliveRoutes.filter((item) => {
-      if (activeRoute === item) {
+      if (matchedRoute === item) {
         return false;
       }
 
       // 符合keepAlive的组件继续保持
-      return item.keepAliveMatchs.some((matchPath) => matchPath(activeRoute.path));
+      return item.keepAliveMatchs.some((matchPath) => matchPath(matchedRoute.path));
     });
 
     const routerViewRoutes = [ ...keepAliveRoutes ];
 
     // 不是从拦截器中返回的节点，则进行保存
-    if (activeRoute.keepAliveMatchs) {
-      keepAliveRoutes.push(activeRoute);
+    if (matchedRoute.keepAliveMatchs) {
+      keepAliveRoutes.push(matchedRoute);
     }
 
-    routerViewRoutes.push(activeRoute);
+    routerViewRoutes.push(matchedRoute);
 
     // 异步加载
-    if (!activeRoute.RouteView) {
-      const FC = (await activeRoute.lazy()).default;
-      activeRoute.RouteView = FC;
+    if (!matchedRoute.RouteView) {
+      const FC = (await matchedRoute.lazy()).default;
+      matchedRoute.RouteView = FC;
     }
 
     this.keepAliveRoutes = keepAliveRoutes;
@@ -373,17 +354,17 @@ export default class Router {
   private updateRoute (history) {
     const { location } = history;
     const { pathname, search } = location;
-    let activeRoute = this.staticRoutes[pathname];
+    let matchedRoute = this.staticRoutes[pathname];
     let params: any = {};
 
 
     // 尝试从动态路由中进行匹配
-    if (!activeRoute) {
+    if (!matchedRoute) {
       this.dynamicRoutes.some((route) => {
         const result = route.pathMatch(pathname);
 
         if (result) {
-          activeRoute = route;
+          matchedRoute = route;
           params = result.params;
           return true;
         }
@@ -391,7 +372,7 @@ export default class Router {
       });
     }
 
-    this.activeRoute = activeRoute;
+    this.matchedRoute = matchedRoute;
 
     // 解析查询参数
     const query: KeyValue = {};
@@ -403,11 +384,11 @@ export default class Router {
     }
 
     // 生成路由信息对象
-    if (activeRoute) {
+    if (matchedRoute) {
       this.route = {
-        path: activeRoute.path,
-        layout: activeRoute.layout,
-        title: activeRoute.title,
+        path: matchedRoute.path,
+        layout: matchedRoute.layout,
+        title: matchedRoute.title,
         params,
         query,
       };
@@ -422,38 +403,6 @@ export default class Router {
 
     // console.info('updateRoute', this.route);
   }
-}
-
-function Nonex () {
-  const [ txt, txtSet ] = useState(0);
-  return <div onClick={() => txtSet(Math.random())}>xx{txt}xaa</div>;
-}
-
-let arr = [ 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
-arr = arr.concat(arr);
-arr = arr.concat(arr);
-arr = arr.concat(arr);
-arr = arr.concat(arr);
-arr = arr.concat(arr);
-arr = arr.concat(arr);
-arr = arr.concat(arr);
-arr = arr.concat(arr);
-arr = arr.concat(arr);
-// arr = arr.concat(arr);
-// arr = arr.concat(arr);
-// arr = arr.concat(arr);
-
-function MapInput () {
-  console.info('yes');
-  return (
-    <>
-      {
-        arr.map((v, i) => (
-          <Input key={`${i}`} name={`${i}`} defaultValue={i} />
-        ))
-      }
-    </>
-  );
 }
 
 function queryStringify (query) {

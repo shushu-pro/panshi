@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import user from '@/page/user/exports';
+import user from '@/page/user';
 import { Link } from 'react-router-dom';
 import Header from './Header/index';
 import styles from './index.less';

@@ -1,6 +1,7 @@
 import { RoutesConfig } from '@/router';
 import others from './others';
 import user from './user';
+import app from './app';
 
 export default [
   {
@@ -10,6 +11,7 @@ export default [
     children: [
       ...others,
       ...user,
+      ...app,
     ],
   },
 ] as RoutesConfig;

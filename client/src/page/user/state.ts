@@ -1,64 +1,104 @@
 import { atom, useRecoilState, selector, useRecoilValue, useRecoilValueLoadable, useRecoilStateLoadable, useSetRecoilState } from 'recoil';
 import { api } from '@/api';
 
-let userInfo = {
-  avatar: 'https://gw.alipayobjects.com/zos/antfincdn/XAosXuNZyF/BiazfanxmamNRoxxVxka.png',
-  nick: '磐石',
+
+let userInfoData: any = {
+  isLogin: false,
+  info: {
+    nick: '',
+    avatar: 'https://gw.alipayobjects.com/zos/antfincdn/XAosXuNZyF/BiazfanxmamNRoxxVxka.png',
+  },
   auths: [],
 };
 
 const userInfoAtom = atom({
   key: 'userInfoAtom',
-  default: userInfo,
+  default: userInfoData,
 });
 
+const userInfoSelector = selector({
+  key: 'userInfoSelector',
+  get ({ get }) {
+    return get(userInfoAtom);
+  },
+  set ({ set }, newValue) {
+    set(userInfoAtom, userInfoData = newValue);
+  },
+});
 
-const useSetUserInfo = () => {
-  const setUserInfo = useSetRecoilState(userInfoAtom);
+const useUserInfo = (): [any, any] => useRecoilState(userInfoSelector);
+const getUserInfo = () => userInfoData;
+export default {
+  useUserInfo,
 
-  return async () => api.user
-    .info()
-    .then((data) => {
-      setUserInfo(userInfo = data);
-    });
+  getUserInfo,
+
 };
 
 export {
-  useSetUserInfo,
+  useUserInfo,
+
+  getUserInfo,
 };
 
+// let userInfo = {
+//   avatar: 'https://gw.alipayobjects.com/zos/antfincdn/XAosXuNZyF/BiazfanxmamNRoxxVxka.png',
+//   nick: '磐石',
+//   auths: [],
+// };
 
-// let hasLogin = false;
-
-
-// const userInfoSelector = selector({
-//   key: 'userInfoSelector',
-//   async get () {
-//     await pullUserLoginState();
-//     return userInfo;
-//   },
-//   set ({ set }, nextValue: any) {
-//     set(userInfoAtom, userInfo = nextValue);
-//   },
+// const userInfoAtom = atom({
+//   key: 'userInfoAtom',
+//   default: userInfo,
 // });
 
-// async function pullUserLoginState () {
-//   if (!hasLogin) {
-//     try {
-//       userInfo = await api.user.info();
-//       hasLogin = true;
-//     } catch (err) {
-//       return false;
-//     }
-//   }
-//   return hasLogin;
-// }
 
+// const useSetUserInfo = () => {
+//   const setUserInfo = useSetRecoilState(userInfoAtom);
 
-// const useInfo = () => useRecoilValue(userInfoAtom); // useRecoilStateLoadable(userInfoSelector);
+//   return async () => api.user
+//     .info()
+//     .then((data) => {
+//       setUserInfo(userInfo = data);
+//     });
+// };
 
 // export {
-//   pullUserLoginState,
-
-//   useInfo,
+//   useSetUserInfo,
 // };
+
+
+// // let hasLogin = false;
+
+
+// // const userInfoSelector = selector({
+// //   key: 'userInfoSelector',
+// //   async get () {
+// //     await pullUserLoginState();
+// //     return userInfo;
+// //   },
+// //   set ({ set }, nextValue: any) {
+// //     set(userInfoAtom, userInfo = nextValue);
+// //   },
+// // });
+
+// // async function pullUserLoginState () {
+// //   if (!hasLogin) {
+// //     try {
+// //       userInfo = await api.user.info();
+// //       hasLogin = true;
+// //     } catch (err) {
+// //       return false;
+// //     }
+// //   }
+// //   return hasLogin;
+// // }
+
+
+// // const useInfo = () => useRecoilValue(userInfoAtom); // useRecoilStateLoadable(userInfoSelector);
+
+// // export {
+// //   pullUserLoginState,
+
+// //   useInfo,
+// // };

@@ -1,0 +1,98 @@
+.sidebar {
+    background-color: #fff;
+    overflow-x: hidden !important;
+    overflow-y: scroll !important;
+
+    .topbar {
+        padding: 12px;
+
+        h3 {
+            line-height: 32px;
+
+            .appName {
+                width: 135px;
+                height: 30px;
+                overflow: hidden;
+                display: inline-block;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+        }
+    }
+
+    :global(.ant-tree.ant-tree-directory>li.ant-tree-treenode-selected>span.ant-tree-node-content-wrapper::before),
+    :global(.ant-tree.ant-tree-directory .ant-tree-child-tree>li.ant-tree-treenode-selected>span.ant-tree-node-content-wrapper::before) {
+        background-color: #e6f7ff;
+    }
+
+    :global(.ant-tree.ant-tree-directory>li span.ant-tree-node-content-wrapper.ant-tree-node-selected),
+    :global(.ant-tree.ant-tree-directory .ant-tree-child-tree>li span.ant-tree-node-content-wrapper.ant-tree-node-selected),
+    :global(.ant-tree.ant-tree-directory .ant-tree-treenode .ant-tree-node-content-wrapper.ant-tree-node-selected) {
+        color: #eee;
+
+        a {
+            color: #eee;
+        }
+
+    }
+
+    .cat1-title {
+        display: inline-block;
+        width: 286px;
+
+        .btns {
+            display: none;
+            float: right;
+
+            span {
+                margin-right: 6px;
+            }
+        }
+
+        &:hover {
+            .btns {
+                display: inline;
+            }
+        }
+    }
+
+    .cat2-title {
+        display: inline-block;
+        width: 260px;
+
+        .btns {
+            display: none;
+            float: right;
+
+            span {
+                margin-right: 6px;
+            }
+        }
+
+        &:hover {
+            .btns {
+                display: inline;
+            }
+        }
+    }
+
+    .api-title {
+        display: inline-block;
+        width: 238px;
+
+        .btns {
+            display: none;
+            float: right;
+
+            span {
+                margin-right: 6px;
+            }
+        }
+
+        &:hover {
+            .btns {
+                display: inline;
+            }
+        }
+    }
+}

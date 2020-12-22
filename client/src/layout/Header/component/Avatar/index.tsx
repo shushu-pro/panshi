@@ -2,33 +2,23 @@ import React from 'react';
 import { Avatar, Dropdown, Menu } from 'antd';
 import { useHistory } from 'react-router-dom';
 import { UserOutlined, SettingOutlined, LogoutOutlined } from '@ant-design/icons';
-import user from '@/page/user/exports';
+import user from '@/page/user';
 
 import HeaderStyles from '../../index.less';
 import styles from './index.less';
 
-// const mapStateToProps = ({ user }) => ({
-//   user,
-// });
-
-// const mapDispatchToProps = (dispatch) => ({
-//   logout: () => dispatch('user.logout'),
-// });
-
-// export default connect(mapStateToProps, mapDispatchToProps)(MyAvatar);
-
 export default MyAvatar;
 
 function MyAvatar () {
-  // const userInfo = user.useInfo();
-  const userInfo = {};
+  const { info } = user.getUserInfo();
+  const logout = user.useLogout();
 
   return (
     <div className={HeaderStyles.action}>
       <Dropdown overlay={<Overlay />}>
         <div>
-          <Avatar size="small" className={styles.avatar} src={userInfo.avatar} alt="avatar" />
-          <span>{userInfo.nick}</span>
+          <Avatar size="small" className={styles.avatar} src={info.avatar} alt="avatar" />
+          <span>{info.nick}</span>
         </div>
       </Dropdown>
     </div>
@@ -48,13 +38,15 @@ function MyAvatar () {
     );
 
     function onMenuClick ({ key }) {
-      // if (key === 'logout') {
-      //   return logout().then(() => {
-      //     history.push('/login');
-      //   });
-      // }
+      if (key === 'logout') {
+        logout()
+          .then(() => {
+            history.push('/login');
+          });
+        return;
+      }
 
-      // history.push(`/user/${key}`);
+      history.push(`/user/${key}`);
     }
   }
 }

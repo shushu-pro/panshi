@@ -3,7 +3,7 @@ import ReactDom from 'react-dom';
 import { RecoilRoot } from 'recoil';
 import { ConfigProvider } from 'antd';
 import zhCN from 'antd/lib/locale/zh_CN';
-import Router from '@/router/index';
+import Router from '@/router';
 import withState from './store';
 import './app.less';
 

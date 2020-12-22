@@ -4,15 +4,15 @@ import { RoutesConfig } from '@/router';
 export default [
   {
     path: '',
-    redirect: '/home/abc',
-    // redirect: '/user/center/apps',
+    redirect: '/user/center/apps',
   },
 
   {
     title: '首页',
     path: 'home/:abc',
     lazy: () => import('@/page/home'),
-    // keepAlive: [ '/page404' ],
+    // auths: [ 'aaa' ],
+    keepAlive: [ '/page404' ],
   },
 
   {

@@ -1,41 +1,40 @@
 import React, { useState, useEffect } from 'react';
-import Layout from '@/layout/index';
+
 import { Redirect } from 'react-router-dom';
-import { atom, useRecoilState, useRecoilValue } from 'recoil';
+import Layout from '@/layout/index';
+import user from '@/page/user';
+import { RoutesConfig } from './core/define';
 import createRouter, { useRoute } from './core';
-import { RoutesConfig } from './core/Router';
 import routes from './routes';
 
-
-let userInfoData = {
-  nick: '',
-  auths: [],
-};
-const userInfoAtom = atom({ key: 'userInfo', default: userInfoData });
-
-
 const { defaultTitle } = process.env;
-
 
 export default createRouter({
   Layout,
   routes,
   routerState (setState) {
-    const [ userInfo, userInfoSet ] = useRecoilState(userInfoAtom);
+    const [ userInfo, userInfoSet ] = user.useUserInfo();
+
+    // 获取路由状态，登录状态，权限因子
+    useEffect(() => {
+    //   console.info('routerState.mouted');
+      user.pullInfo()
+        .then((data) => {
+          setState({
+            isReady: true,
+            isLogin: true,
+            auths: data.auths,
+          });
+          userInfoSet({ ...data, isLogin: true });
+        })
+        .catch(() => {
+          setState({ isReady: true, isLogin: false });
+        });
+    }, []);
 
     useEffect(() => {
-      setTimeout(() => {
-        userInfoSet(userInfoData = {
-          nick: '张三',
-          auths: [],
-        });
-
-        setState({
-          isLogin: !true,
-          auths: [],
-        });
-      }, 1000);
-    }, []);
+      setState({ isLogin: userInfo.isLogin });
+    }, [ userInfo.isLogin ]);
   },
   routerEnter (router) {
     document.title = router.title() || defaultTitle;
@@ -61,5 +60,6 @@ export default createRouter({
 });
 
 export {
-  useRoute, RoutesConfig,
+  RoutesConfig,
+  useRoute,
 };
