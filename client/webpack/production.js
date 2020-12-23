@@ -189,6 +189,7 @@ module.exports = base.extends({
       publicPath: BUILD_PATH,
       languages: [ 'json', 'javascript', 'html', 'xml' ],
     }),
+    new webpack.ContextReplacementPlugin(/moment[/\\]locale$/, /zh-cn/),
   ],
   optimization: {
     minimize: true,

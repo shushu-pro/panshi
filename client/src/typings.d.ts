@@ -3,6 +3,6 @@ declare module '*.less' {
   export default classes;
 }
 declare module '*.png' {
-  const classes: any;
-  export default classes;
+  const value: any;
+  export default value;
 }

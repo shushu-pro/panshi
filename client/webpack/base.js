@@ -25,8 +25,6 @@ function extendsConfig (config) {
   // const ISBUILD = mode === 'production';
   const baseURL = ISDEV ? '/' : BUILD_PATH;
 
-  console.info({ baseURL, ISDEV });
-
   const { rules } = module;
 
   return {
