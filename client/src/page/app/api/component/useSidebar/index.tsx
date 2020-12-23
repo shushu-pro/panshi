@@ -7,6 +7,7 @@ import { api } from '@/api';
 import adapter from '@shushu.pro/adapter';
 import { PlusCircleOutlined, PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 // import tower from '@/package/tower';
+import { AnyAction } from 'redux';
 import styles from './index.less';
 
 export default useSidebar;
@@ -24,6 +25,9 @@ function useSidebar ({ apiId, appId }) {
 
   const [ topbarJSX, topbar ] = useTopbar({
     appId, appDetail,
+  });
+  const [ APITreeJSX, APITree ] = useAPITree({
+    appId,
   });
 
   useEffect(() => {
@@ -52,7 +56,7 @@ function useSidebar ({ apiId, appId }) {
       }}
     >
       {topbarJSX}
-      {/* {renderAPITree()} */}
+      {APITreeJSX}
     </Layout.Sider>
   );
 
@@ -73,6 +77,12 @@ function useDataState ({ appId }) {
   const [ appDetail, appDetailSet ] = useState({});
   const [ rawCategorys, rawCategorysSet ] = useState(null);
   const [ appApiList, appApiListSet ] = useState(null);
+
+  useEffect(() => {
+    fetchAppDetail();
+    fetchAppCategoryList();
+    fetchAppApiList();
+  }, []);
 
   function fetchAppDetail () {
     api.app.detail({ id: appId })
@@ -98,10 +108,9 @@ function useDataState ({ appId }) {
   return [ { appDetail, rawCategorys, appApiList }, { fetchAppDetail, fetchAppCategoryList, fetchAppApiList } ];
 }
 
-
 function useTopbar ({ appId, appDetail }) {
   const history = useHistory();
-  const [ ProjectCategoryCreateDialog, projectCategoryCreateDialog ] = useProjectCategoryCreateDialog();
+  const [ ProjectCategoryCreateDialog, projectCategoryCreateDialog ] = useProjectCategoryCreateDialog({ appId });
   const exportAPI = createAPI();
   const exportJSX = (
     <div className={styles.topbar}>
@@ -126,8 +135,6 @@ function useTopbar ({ appId, appDetail }) {
 
       </h3>
       <ProjectCategoryCreateDialog />
-      {/* <SMDialog hook={hookProjectSettingDialog} />
-      <SMDialog hook={hookProjectAddCategoryDialog} /> */}
     </div>
   );
 
@@ -142,7 +149,7 @@ function useTopbar ({ appId, appDetail }) {
   }
 }
 
-function useProjectCategoryCreateDialog () {
+function useProjectCategoryCreateDialog ({ appId }) {
   const [ parentId, parentIdSet ] = useState();
   const [ Form, form ] = useSMForm({
     initialValue: {
@@ -174,8 +181,6 @@ function useProjectCategoryCreateDialog () {
     onSubmit () {
       return form.submit()
         .then((values) => {
-          form.lockSubmit();
-
           api.app.category
             .create({
               appId,
@@ -185,34 +190,39 @@ function useProjectCategoryCreateDialog () {
             .then(() => {
               message.success('操作成功');
             });
-
-          // ...
         });
     },
     afterClose () {
       form.reset();
     },
-
-    // onOpen: (hook, parentId) => {
-    //   parentIdSet(parentId);
-    // },
-    // onSubmit: () => hookProjectAddCategoryForm
-    //   .validate()
-    //   .then((values) => api.app.category.create({
-    //     appId,
-    //     parentId,
-    //     name: values.name,
-    //   })
-    //     .then(() => {
-    //       message.success('操作成功');
-    //       fetchAppCategoryList();
-    //     }))
-    //   .finally(() => {
-    //     setLoading(false);
-    //   }),
-    // afterClose () {
-    //   hookProjectAddCategoryForm.resetFields();
-    // },
-    // render: () => (<SMForm hook={hookProjectAddCategoryForm} />),
   });
+}
+
+// API菜单树
+function useAPITree ({ appId }) {
+  const exportAPI = createAPI();
+  const [ treeData, treeDataSet ] = useState([]);
+
+  const exportJSX = (
+    <>
+      <Tree.DirectoryTree
+        draggable
+        autoExpandParent
+        treeData={treeData}
+        // onDrop={onDrop}
+      />
+      {/* <SMDialog hook={hookCreateAPIDialog} />
+    <SMDialog hook={hookModifyCategoryDialog} /> */}
+    </>
+  );
+
+  return [ exportJSX, exportAPI ];
+
+  function createAPI () {
+    return {
+      noop () {
+        // ..
+      },
+    };
+  }
 }

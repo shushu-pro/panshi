@@ -5,7 +5,7 @@ import { SelectProps } from 'antd/lib/select';
 
 interface SMFormAPI {
   readonly reset: () => void;
-  readonly submit: () => Promise<unknown>;
+  readonly submit: () => Promise<any>;
   readonly lockSubmit: () => void;
   readonly unlockSubmit: () => void;
   readonly setValue: (value) => void;
