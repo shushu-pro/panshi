@@ -1,6 +1,6 @@
-import useSMDialog from './SMDialog/index';
-import useSMForm from './SMForm/index';
-import useSMTable from './SMTable/index';
+import useSMDialog from './SMDialog';
+import useSMForm from './SMForm';
+import useSMTable from './SMTable';
 
 export {
   useSMDialog,

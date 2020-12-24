@@ -28,13 +28,11 @@ export default [
         ],
       },
 
-      // {
-
-      //   title: '个人设置',
-      //   path: 'settings',
-      //   lazy: () => import('@/page/user/settings'),
-
-      // },
+      {
+        title: '个人设置',
+        path: 'settings',
+        lazy: () => import('@/page/user/settings'),
+      },
     ],
   },
 ] as RoutesConfig;

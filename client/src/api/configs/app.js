@@ -68,6 +68,10 @@ export default {
     modify: {
       method: 'post',
       url: 'app/category/modify',
+      requestData: {
+        $strict: false,
+        categoryId: 'id',
+      },
     },
 
     delete: {

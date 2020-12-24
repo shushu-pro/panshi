@@ -3,17 +3,19 @@ import { Form, Input, Radio, Checkbox, Select, Col, Row, Space, Button } from 'a
 import { Rule } from 'antd/lib/form';
 import { SelectProps } from 'antd/lib/select';
 
-interface SMFormAPI {
-  readonly reset: () => void;
-  readonly submit: () => Promise<any>;
-  readonly lockSubmit: () => void;
-  readonly unlockSubmit: () => void;
-  readonly setValue: (value) => void;
+
+interface SMFormInterface {
+  (): JSX.Element;
+  readonly reset?: () => void;
+  readonly submit?: () => Promise<unknown>;
+  readonly lockSubmit?: () => void;
+  readonly unlockSubmit?: () => void;
+  readonly setValue?: (value) => void;
 }
 
 type CommonFieldConfig = {
   visible?: boolean | ((option) => boolean);
-  type?: 'input'| 'select'| 'text' |'radio'| 'custom'|'password'| 'checkbox';
+  type?: 'input'| 'select'| 'text' |'radio'| 'custom'|'password' | 'checkbox' | 'hidden';
   options?: Array<{
     label: string;
     value: unknown;
@@ -35,7 +37,7 @@ type FieldConfig = CommonFieldConfig & {
   label: string;
 } | [string, string, CommonFieldConfig]
 
-export interface SMFormProps {
+export type SMFormProps = {
   props?: Record<string, unknown>; // 传递组件的原生props
   initialValue?: Record<string, unknown>; // 组件的默认值
   value?: Record<string, unknown>; // 组件的值
@@ -48,36 +50,28 @@ export interface SMFormProps {
   onSubmit?: (error, values) => void;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function SMForm (props: SMFormProps) {
-  // ...
-}
+const propsKey = Symbol('propsKey');
+const prevValueKey = Symbol('prevValueKey');
+const valueLockKey = Symbol('valueLockKey');
 
-type FCA = {
-  (): JSX.Element;
-  API: SMFormAPI
-}
+function useSMForm (props: SMFormProps) {
+  const SMFormFactory: SMFormInterface = () => {
+    const {
+      props = {},
+      fields,
+      initialValue = {},
+      value = {},
+      gridLayout = {},
+      footer,
+      onSubmit,
+    } = SMForm[propsKey];
+    const innerAPI = SMForm;
 
-export default function useSMForm ({
-  props = {},
-  fields,
-  initialValue = {},
-  value,
-  gridLayout = {},
-  footer,
-  onSubmit,
-}: SMFormProps) {
-  const [ exportFC ] = useState(() => FC as FCA);
-  return [ exportFC, new Proxy(exportFC, {
-    get (target: any, key) { return target.API[key]; },
-  }) ] as [FCA, SMFormAPI];
-
-  function FC () {
     const [ form ] = Form.useForm();
     const [ submitLoading, submitLoadingSet ] = useState(false);
 
-    const [ initValue ] = useState(initialValue);
-    const [ formValue, formValueSet ] = useState(value);
+    // const [ initialValue ] = useState(initialValue);
+    // const [ formValue, formValueSet ] = useState(value);
 
 
     // 渲染的字段配置
@@ -127,8 +121,8 @@ export default function useSMForm ({
         trimFields[name] = true;
       }
 
-      if (initValue[name] !== undefined) {
-        viewField.initialValue = initValue[name];
+      if (initialValue[name] !== undefined) {
+        viewField.initialValue = initialValue[name];
       }
 
       if (option.render) {
@@ -153,23 +147,20 @@ export default function useSMForm ({
       }
     };
 
-    const API = exportFC.API = createAPI();
-
     useEffect(() => {
-      if (formValueSet) {
-        form.setFieldsValue(formValue);
+      if (!SMForm[valueLockKey] && SMForm[prevValueKey] !== value) {
+        SMForm[prevValueKey] = value;
+        SMForm.setValue(value);
+        SMForm[valueLockKey] = false;
       }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [ formValue ]);
+    }, [ value ]);
 
-    // useEffect(() => {
-    //   console.info('form.mouted');
-    // }, []);
+    exportAPI();
 
-    const jsx = (
-      <Form form={form} colon={false} {...props} {...createExternalProps()} onBlur={onBlur}>
+    return (
+      <Form form={form} colon={false} {...props} {...createExternalProps()} onBlur={onBlur} onValuesChange={onValuesChange}>
         {viewFields.map((field) => {
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
           const { type, width, maxlength, disabled, options, render, placeholder, visible, selectProps, ...formItemProps } = field;
           const itemDisabled = typeof disabled === 'function' ? disabled(field) : disabled;
 
@@ -196,6 +187,9 @@ export default function useSMForm ({
             case 'text':
               content = <div>{field.initialValue}</div>;
               break;
+            case 'hidden':
+              content = <Input type="hidden" />;
+              break;
             default:
               content = null;
               break;
@@ -207,7 +201,7 @@ export default function useSMForm ({
               {...formItemProps}
               labelCol={labelCol}
               wrapperCol={wrapperCol}
-              style={{ width: width ? `${width}px` : 'auto' }}
+              style={{ width: width ? `${width}px` : 'auto', display: type === 'hidden' ? 'none' : '' }}
             >
               {content}
             </Form.Item>
@@ -218,8 +212,8 @@ export default function useSMForm ({
             <Col {...labelCol} />
             <Col {...wrapperCol}>
               <Space>
-                <Button onClick={() => API.reset()} loading={submitLoading}>重置</Button>
-                <Button type="primary" onClick={() => API.submit()} loading={submitLoading}>提交</Button>
+                <Button onClick={() => innerAPI.reset()} loading={submitLoading}>重置</Button>
+                <Button type="primary" onClick={() => innerAPI.submit()} loading={submitLoading}>提交</Button>
               </Space>
             </Col>
           </Row>
@@ -227,11 +221,10 @@ export default function useSMForm ({
       </Form>
     );
 
-    return jsx;
-
-    function createAPI (): SMFormAPI {
-      return {
+    function exportAPI () {
+      Object.assign(SMForm, {
         reset () {
+          innerAPI[valueLockKey] = true;
           form.resetFields();
         },
         submit () {
@@ -253,10 +246,11 @@ export default function useSMForm ({
         unlockSubmit () {
           submitLoadingSet(false);
         },
-        setValue (nextValue) {
-          formValueSet(nextValue);
+        setValue (value) {
+          SMForm[valueLockKey] = true;
+          form.setFieldsValue(value);
         },
-      };
+      });
     }
 
     function createExternalProps () {
@@ -265,5 +259,20 @@ export default function useSMForm ({
       };
       return externalProps;
     }
-  }
+
+    function onValuesChange (changeValues, allValues) {
+      SMForm[valueLockKey] = true;
+    }
+  };
+
+  const [ SMForm ] = useState(() => {
+    SMFormFactory[valueLockKey] = false;
+    return SMFormFactory;
+  });
+
+  SMForm[propsKey] = props;
+
+  return SMForm;
 }
+
+export default useSMForm;

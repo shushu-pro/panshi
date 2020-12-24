@@ -11,110 +11,6 @@ const api = easyapi({
   env: NODE_ENV,
   baseURL: `${baseURL}openapi/`,
   configs,
-  configs2: {
-
-
-    user: {
-      login: {
-        method: 'post',
-        url: 'user/login',
-      },
-      alls: {
-        url: 'user/alls',
-        responseData: {
-          $strict: false,
-          list: {
-            createTime: '#time',
-          },
-        },
-      },
-      create: {
-        method: 'post',
-        url: 'user/create',
-      },
-
-      modify: {
-        method: 'post',
-        url: 'user/modify',
-      },
-      resetPassword: {
-        method: 'post',
-        url: 'user/resetPassword',
-      },
-
-      role: {
-        list: {
-          url: 'user/role/list',
-        },
-        modify: {
-          method: 'post',
-          url: 'user/role/modify',
-        },
-      },
-    },
-
-    module: {
-      list: {
-        url: 'module/list',
-      },
-      create: {
-        method: 'post',
-        url: 'module/create',
-      },
-      delete: {
-        method: 'post',
-        url: 'module/delete',
-      },
-      functionGroup: {
-        list: {
-          url: 'module/functionGroup/list',
-        },
-        create: {
-          method: 'post',
-          url: 'module/functionGroup/create',
-        },
-        delete: {
-          method: 'post',
-          url: 'module/functionGroup/delete',
-        },
-        modify: {
-          method: 'post',
-          url: 'module/functionGroup/modify',
-        },
-      },
-      function: {
-        list: {
-          url: 'module/function/list',
-        },
-        create: {
-          method: 'post',
-          url: 'module/function/create',
-        },
-        delete: {
-          method: 'post',
-          url: 'module/function/delete',
-        },
-        modify: {
-          method: 'post',
-          url: 'module/function/modify',
-        },
-      },
-    },
-
-    role: {
-      list: {
-        url: 'role/list',
-      },
-
-    },
-
-    app: {
-      all: {
-        url: 'app/all',
-      },
-    },
-
-  },
   errorIgnore: true,
   resolve: (responseObject) => responseObject.data.data,
   request (config) {
@@ -186,7 +82,6 @@ const api = easyapi({
 });
 
 const mockapi = easyapi({
-  env: NODE_ENV,
   baseURL: `${baseURL}mockapi/`,
   configs: {
     send: {
@@ -194,7 +89,7 @@ const mockapi = easyapi({
     },
   },
   resolve: (responseObject) => responseObject.data,
-  request (data, config) {
+  request (config) {
     // ..
   },
 });

@@ -2,6 +2,7 @@ import { RoutesConfig } from '@/router';
 import others from './others';
 import user from './user';
 import app from './app';
+import manager from './manager';
 
 export default [
   {
@@ -12,6 +13,7 @@ export default [
       ...others,
       ...user,
       ...app,
+      ...manager,
     ],
   },
 ] as RoutesConfig;

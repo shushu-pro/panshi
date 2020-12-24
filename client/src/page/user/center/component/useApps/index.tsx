@@ -8,7 +8,6 @@ import cover2 from './img/cover/iXjVmWVHbCJAyqvDxdtx.png';
 import cover3 from './img/cover/iZBVOIhGJiAnhplqjvZW.png';
 import cover4 from './img/cover/uMfMFlvUuceEyPpotzlq.png';
 
-
 export default useApps;
 
 function useApps () {
@@ -17,7 +16,7 @@ function useApps () {
 
   const [ appListJSX, { fetchAppList } ] = useAppList();
 
-  const [ CreateDialog, createDialog ] = useCreateDialog({
+  const CreateDialog = useCreateDialog({
     fetchAppList,
   });
 
@@ -33,7 +32,7 @@ function useApps () {
   function createAPI () {
     return {
       openCreateDialog () {
-        createDialog.open();
+        CreateDialog.open();
       },
     };
   }
@@ -105,8 +104,9 @@ function useAppList () {
   }
 }
 
-function useCreateDialog ({ fetchAppList }) {
-  const [ Form, form ] = useSMForm({
+function useCreateDialog
+({ fetchAppList }) {
+  const Form = useSMForm({
     fields: [
       { label: '应用名称', name: 'name', maxlength: 20, rules: [ { required: true, message: '请输入应用名称' } ] },
       { label: '应用描述', name: 'description', maxlength: 40, rules: [ ] },
@@ -118,14 +118,14 @@ function useCreateDialog ({ fetchAppList }) {
     title: '创建应用',
     render: () => <Form />,
     onSubmit () {
-      return form.submit()
+      return Form.submit()
         .then((values) => api.app.create(values))
         .then(() => {
           fetchAppList();
         });
     },
     afterClose () {
-      form.reset();
+      Form.reset();
     },
   });
 }

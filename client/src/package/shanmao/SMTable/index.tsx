@@ -3,8 +3,9 @@ import { Table } from 'antd';
 import { ColumnType } from 'antd/lib/table/index';
 
 
-interface SMTableAPI {
-  readonly reload: () => void;
+interface SMTableInterface {
+  (): JSX.Element;
+  readonly reload?: () => void;
 }
 
 interface OCSourceData {
@@ -20,117 +21,129 @@ type SMTableColumnNoraml = {
 
 type SMTableColumn = SMTableColumnNoraml & ColumnType<unknown>
 
-export interface SMTableProps {
+type SMTableProps = {
   props?: Record<string, unknown>; // 传递组件的原生props
   dataSource: (params) => Promise<OCSourceData> | OCSourceData;
   columns: Array<SMTableColumn | [string, string, SMTableColumn?]>;
-  rowKey?: (record) => string | number;
-
+  rowKey?: string | number | ((record) => string | number) ;
 }
 
-export default function useTable ({
-  props = {},
-  dataSource,
-  rowKey = (record) => record.id,
-  columns,
-}: SMTableProps) {
-  const [ loading, loadingSet ] = useState(false);
-  const [ params, paramsSet ] = useState({
-    page: 1,
-    pageSize: 20,
-    sortField: undefined,
-    sortType: undefined,
-  });
-  const [ tableData, tableDataSet ] = useState({
-    list: [],
-    total: 0,
-    pageSize: 20,
-  });
+const propsKey = Symbol('propsKey');
 
-  const api = createAPI();
-  const jsx = (
-    <Table
-      {...props}
-      {...createProps()}
-      loading={loading}
-      dataSource={tableData.list}
-      onChange={onChange}
-    />
-  );
+function useSMTable (useSMTableProps: SMTableProps) {
+  // useEffect(() => {
+  //   console.info('SMTable.init');
+  // }, []);
 
+  const SMTableFactory: SMTableInterface = () => {
+    const {
+      props = {},
+      dataSource,
+      rowKey = (record) => record.id,
+      columns,
+    } = SMTable[propsKey];
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(fetchDataSource, [ params ]);
-
-  return [ jsx, api ] as [JSX.Element, SMTableAPI];
-
-  function createAPI (): SMTableAPI {
-    return {
-      reload () {
-        if (loading) {
-          return;
-        }
-        paramsSet({ ...params });
-      },
-    };
-  }
-
-  function createProps () {
-    const externalProps: { [k: string]: unknown } = {
-      rowKey,
-      columns: transformColumns(columns),
-    };
-
-    externalProps.pagination = props.pagination === false ? false : {
-      ...(props.pagination as Record<string, unknown>),
-      current: params.page,
-      pageSize: tableData.pageSize,
-      total: tableData.total,
-    };
-
-    return externalProps;
-  }
-
-  // 拉取数据
-  function fetchDataSource () {
-    const result = dataSource(params);
-    if (result instanceof Promise) {
-      loadingSet(true);
-      result
-        .then((data) => {
-          tableDataSet(data);
-        })
-        .catch(() => {
-          // ...
-        })
-        .finally(() => {
-          loadingSet(false);
-        });
-    } else {
-      tableDataSet(result);
-    }
-  }
-
-  function onChange (pagination, filters, { field, order }) {
-    paramsSet((params) => {
-      let page = pagination.current;
-
-      // 排序条件发生变化
-      if (params.sortType !== order || params.sortField && params.sortField !== field) {
-        page = 1;
-        if (!order) {
-          field = undefined;
-        }
-      }
-
-      return {
-        page,
-        pageSize: pagination.pageSize,
-        sortField: field,
-        sortType: order,
-      };
+    const [ loading, loadingSet ] = useState(false);
+    const [ params, paramsSet ] = useState({
+      page: 1,
+      pageSize: 20,
+      sortField: undefined,
+      sortType: undefined,
     });
-  }
+    const [ tableData, tableDataSet ] = useState({
+      list: [],
+      total: 0,
+      pageSize: 20,
+    });
+
+    useEffect(fetchDataSource, [ params ]);
+
+    exportAPI();
+
+    return (
+      <Table
+        {...props}
+        {...createExternalProps()}
+        loading={loading}
+        dataSource={tableData.list}
+        onChange={onChange}
+      />
+    );
+
+    function exportAPI () {
+      Object.assign(SMTable, {
+        reload () {
+          if (loading) {
+            return;
+          }
+          paramsSet({ ...params });
+        },
+      });
+    }
+
+    function createExternalProps () {
+      const externalProps: { [k: string]: unknown } = {
+        rowKey,
+        columns: transformColumns(columns),
+      };
+
+      externalProps.pagination = props.pagination === false ? false : {
+        ...(props.pagination as Record<string, unknown>),
+        current: params.page,
+        pageSize: tableData.pageSize,
+        total: tableData.total,
+      };
+
+      return externalProps;
+    }
+
+    // 拉取数据
+    function fetchDataSource () {
+      const result = dataSource(params);
+      if (result instanceof Promise) {
+        loadingSet(true);
+        result
+          .then((data) => {
+            tableDataSet(data);
+          })
+          .catch(() => {
+          // ...
+          })
+          .finally(() => {
+            loadingSet(false);
+          });
+      } else {
+        tableDataSet(result);
+      }
+    }
+
+    function onChange (pagination, filters, { field, order }) {
+      paramsSet(({ sortType, sortField }) => {
+        let page = pagination.current;
+
+        // 排序条件发生变化
+        if (sortType !== order || sortField && sortField !== field) {
+          page = 1;
+          if (!order) {
+            field = undefined;
+          }
+        }
+
+        return {
+          page,
+          pageSize: pagination.pageSize,
+          sortField: field,
+          sortType: order,
+        };
+      });
+    }
+  };
+
+  const [ SMTable ] = useState(() => SMTableFactory);
+
+  SMTable[propsKey] = useSMTableProps;
+
+  return SMTable;
 }
 
 // 数据转化
@@ -160,3 +173,5 @@ function transformColumns (columns) {
 
   return columnsNext;
 }
+
+export default useSMTable;
