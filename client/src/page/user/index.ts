@@ -15,7 +15,6 @@ const useLogout = () => {
   });
 };
 
-
 // 权限接口
 function hasAuth(atom: string): boolean;
 function hasAuth(atoms: Array<string>): boolean;
