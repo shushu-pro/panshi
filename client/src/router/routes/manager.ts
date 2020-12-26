@@ -9,24 +9,22 @@ export default [
         path: 'user',
         lazy: () => import('@/page/manager/user'),
       },
-      // {
-      //   path: 'permisstion',
-      //   // keepAlive: [ '/manage/user' ],
-      //   // lazy: () => import('@/page/manage/permisstion'),
-      //   children: [
-      //     {
-      //       title: '权限管理',
-      //       path: '',
-      //       redirect: '/manager/permisstion/module',
-      //     },
-      //     {
-      //       title: '模块管理',
-      //       path: 'module',
-      //       lazy: () => import('@/page/manager/permisstion'),
-      //     },
-
-      //   ],
-      // },
+      {
+        path: 'permisstion',
+        children: [
+          { redirect: '/manager/permisstion/module' },
+          {
+            title: (route) => {
+              if (route.params.type === 'module') {
+                return '模块管理';
+              }
+              return '角色管理';
+            },
+            path: ':type',
+            lazy: () => import('@/page/manager/permisstion'),
+          },
+        ],
+      },
     ],
   },
 ] as RoutesConfig;

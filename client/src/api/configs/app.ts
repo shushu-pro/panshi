@@ -1,4 +1,6 @@
-export default {
+import Configs from './Configs';
+
+const configs: Configs = {
   list: {
     url: 'app/list',
   },
@@ -83,7 +85,6 @@ export default {
       method: 'post',
       url: 'app/category/move',
     },
-
   },
 
   api: {
@@ -140,18 +141,20 @@ export default {
         },
         mockResDoc: true,
       },
-      mock2 (data) {
-        return {
-          code: 0,
-          data: {
-            apiId: data.apiId,
-            name: '接口名称',
-            path: 'jjhjhj',
-            method: 0,
-            methodText: 'GET',
-          },
-        };
-      },
+      // mock (data) {
+      //   return {
+      //     code: 0,
+      //     data: {
+      //       apiId: data.apiId,
+      //       name: '接口名称',
+      //       path: 'jjhjhj',
+      //       method: 0,
+      //       methodText: 'GET',
+      //     },
+      //   };
+      // },
     },
   },
 };
+
+export default configs;

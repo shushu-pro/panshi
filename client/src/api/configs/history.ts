@@ -1,4 +1,6 @@
-export default {
+import Configs from './Configs';
+
+const configs: Configs = {
   api: {
     list: {
       url: 'history/api/list',
@@ -8,3 +10,5 @@ export default {
     },
   },
 };
+
+export default configs;

@@ -34,7 +34,7 @@ type CommonFieldConfig = {
 
 type FieldConfig = CommonFieldConfig & {
   name: string;
-  label: string;
+  label?: string;
 } | [string, string, CommonFieldConfig]
 
 export type SMFormProps = {

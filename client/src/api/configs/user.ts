@@ -1,6 +1,6 @@
+import Configs from './Configs';
 
-
-export default {
+const configs: Configs = {
   login: {
     method: 'post',
     url: 'user/login',
@@ -61,3 +61,5 @@ export default {
     },
   },
 };
+
+export default configs;

@@ -1,4 +1,6 @@
-export default {
+import Configs from './Configs';
+
+const configs: Configs = {
 
   user: {
     list: {
@@ -137,3 +139,5 @@ export default {
     },
   },
 };
+
+export default configs;

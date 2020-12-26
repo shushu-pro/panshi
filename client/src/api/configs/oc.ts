@@ -1,4 +1,6 @@
-export default {
+import Configs from './Configs';
+
+const configs: Configs = {
   product: {
     list: {
       url: 'oc/product/list',
@@ -46,3 +48,5 @@ export default {
     },
   },
 };
+
+export default configs;

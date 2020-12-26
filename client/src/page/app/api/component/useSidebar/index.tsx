@@ -183,9 +183,11 @@ function useAPITree ({ appId, apiId, rawCategorys, appApiList, fetchAppApiList, 
 
   const exportJSX = (
     <>
-      <Tree.DirectoryTree
+      <Tree
         draggable
         autoExpandParent
+        showLine
+        showIcon
         treeData={treeData}
         onDrop={onDrop}
       />
@@ -274,9 +276,9 @@ function transfromCategorys ({ rawCategorys, appApiList }) {
 // 转化分类/接口树
 // eslint-disable-next-line max-len
 function transformTreeData ({ appId, apiId, history, categorys, fetchAppApiList, fetchAppCategoryList, ApiCreateDialog, CategoryCreateDialog, CategoryModifyDialog }) {
-  const titleFactory = (title, { row: { key, id, parentId, isLeaf } }) => {
+  const titleFactory = (title, { row: { key, id, parentId, isLeaf } }, level) => {
     // eslint-disable-next-line no-nested-ternary
-    const titleType = isLeaf ? 'api' : (parentId ? 'cat2' : 'cat1');
+    const titleType = isLeaf ? 'api' : (parentId ? `cat${level}` : `cat${level}`);
 
     let titleContent;
 
@@ -322,7 +324,7 @@ function transformTreeData ({ appId, apiId, history, categorys, fetchAppApiList,
               </span>
             </Tooltip>
             {
-              key !== '#' && titleType === 'cat1' && (
+              key !== '#' && level < 3 && (
                 <Tooltip
                   placement="top"
                   title="添加子分类"
@@ -378,15 +380,20 @@ function transformTreeData ({ appId, apiId, history, categorys, fetchAppApiList,
   return adapter({
     key: String,
     isLeaf: true,
-    title: titleFactory,
+    title: (title, row) => titleFactory(title, row, 1),
     children: {
       key: String,
       isLeaf: true,
-      title: titleFactory,
+      title: (title, row) => titleFactory(title, row, 2),
       children: {
         key: String,
         isLeaf: true,
-        title: titleFactory,
+        title: (title, row) => titleFactory(title, row, 3),
+        children: {
+          key: String,
+          isLeaf: true,
+          title: (title, row) => titleFactory(title, row, 4),
+        },
       },
     },
   }, categorys);
@@ -429,6 +436,9 @@ function useApiCreateDialog ({ history, appId, apiId, fetchAppApiList }) {
         options: [
           { label: 'GET', value: 0 },
           { label: 'POST', value: 1 },
+          { label: 'PUT', value: 2 },
+          { label: 'DELETE', value: 3 },
+          { label: 'OPTION', value: 4 },
         ],
         rules: [
           { required: true, message: '请选择请求方式' },

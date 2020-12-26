@@ -16,7 +16,7 @@ export type SMDialogProps = {
 
   width?: number;
   loading?: boolean;
-  onOpen?(api?: SMDialogInterface, params?): void; // 打开窗口
+  onOpen?(params?, api?: SMDialogInterface): void; // 打开窗口
   onSubmit?(api?: SMDialogInterface): void | false | Promise<any>; // 确定按钮的回调
   onClose?(api?: SMDialogInterface): void; // 关闭触发，可以被拦截
   afterClose?(api?: SMDialogInterface): void; // 关闭窗口后触发
@@ -58,7 +58,7 @@ function useSMDialog (props: SMDialogProps) {
 
     useEffect(() => {
       if (visible) {
-        onOpen && onOpen(SMDialog, openParams);
+        onOpen && onOpen(openParams, SMDialog);
       }
     }, [ visible ]);
 

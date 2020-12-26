@@ -168,7 +168,7 @@ function useUserModifyDialog (innerAPI) {
   const Dialog = useSMDialog({
     title: '编辑用户',
     render: () => <Form />,
-    onOpen (api, data) {
+    onOpen (data) {
       Form.setValue({ id: data.id, nick: data.nick });
     },
     onSubmit () {
@@ -202,7 +202,7 @@ function useUserRoleSettingDialog (innerAPI) {
         />
       );
     },
-    onOpen (api, id) {
+    onOpen (id) {
       userIdSet(id);
     },
     afterClose () {
